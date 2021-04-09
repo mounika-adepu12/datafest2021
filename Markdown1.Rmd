@@ -19,6 +19,7 @@ library(reticulate)
 us <- read_csv("df_data/US/us_19.csv")
 ```
 ```{r}
-us
+us %>%
+  filter(!is.na(GAB_NMU)) #temporary will remove later
 ```
 
