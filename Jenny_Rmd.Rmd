@@ -9,6 +9,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
+```{r eval=FALSE}
+library(usethis)
+use_git_config(user.name= "JennyHuang19", user.email="yjh3@duke.edu")
+```
+
 ```{r data cleaning}
 elections_clean <- elections %>% 
   mutate(metro = if_else(METRO == 2, "Metro", "Not Metro/Unknown")) %>% 
