@@ -3,4 +3,22 @@ title: "Datafest 2021 (Worksheet 1)"
 output: html_document
 ---
 
+```{r}
+install.packages("reticulate")
+library(readr)
+library(tidyverse)
+library(broom)
+library(knitr)
+library(patchwork)
+library(rms)
+library(reticulate)
+```
+
+
+```{r}
+us <- read_csv("df_data/US/us_19.csv")
+```
+```{r}
+us
+```
 
