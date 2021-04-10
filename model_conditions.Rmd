@@ -1,5 +1,5 @@
 ---
-title: "Jenny_Rmd"
+title: ""
 output: html_document
 ---
 
@@ -7,16 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-```{r eval=FALSE}
-library(usethis)
-use_git_config(user.name= "JennyHuang19", user.email="yjh3@duke.edu")
-```
-
-
 ```{r}
-install.packages("reticulate")
 library(readr)
 library(tidyverse)
 library(broom)
@@ -27,7 +18,6 @@ library(reticulate)
 
 #install.packages("skimr")
 library(skimr)
-install.packages("DataExplorer")
 library(DataExplorer)
 #install.packages("dlookr")
 #library(dlookr)
@@ -41,7 +31,7 @@ We start out with 29873 rows and 523 columns.
 
 ```{r}
 # identify missing entires for each variable and plot dist of each variable
-skim(us)
+#skim(us)
 ```
 
 ```{r}
@@ -49,11 +39,7 @@ skim(us)
 numeric <- us %>% 
   select(where(is.numeric))
 
-glimpse(numeric)
-```
-
-```{r}
-
+#glimpse(numeric)
 ```
 
 
@@ -397,7 +383,7 @@ best_model_abuse_given_use <- step(full_model, scope=formula(int_only_model),
 ```
 
 ```{r}
-tidy(best_model_abuse_given_use, conf.int = TRUE)
+best_model_abuse_given_use
 ```
 ```{r}
 plot_summs(best_model_abuse_given_use, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
@@ -590,5 +576,29 @@ ggplot(ALL_REGIONS_TIDY, aes(y = estimate, x = term, color = REGION))+
   theme_bw() +
   labs(x = "Covariates of Interest", y = "Estimate", title = "Significant Logit Model Coefficients", subtitle = "By US Region")
 dev.off()
+```
+
+
+```{r}
+library(Stat2Data)
+emplogitplot1(ALL_NMU ~ DEM_AGE, data = numeric_of_intrst, 
+              ngroups = 10, main = "Empirical Logit Plot For Age")
+```
+
+```{r}
+bm_augment <- augment(best_model_abuse_given_use)
+bm_augment
+```
+
+```{r}
+resid_fitted_predicted <- ggplot(data = bm_augment, aes(x = DEM_REGION, y = .std.resid)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0, color = "red") +
+  xlab("Predicted Values") + ylab("Std. Resid.") +
+  ggtitle("Residuals vs. Predicted") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+resid_fitted_predicted
 ```
 
