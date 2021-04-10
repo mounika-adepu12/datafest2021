@@ -14,6 +14,631 @@ library(usethis)
 use_git_config(user.name= "JennyHuang19", user.email="yjh3@duke.edu")
 ```
 
+
+```{r}
+install.packages("reticulate")
+library(readr)
+library(tidyverse)
+library(broom)
+library(knitr)
+library(patchwork)
+library(rms)
+library(reticulate)
+
+#install.packages("skimr")
+library(skimr)
+install.packages("DataExplorer")
+library(DataExplorer)
+#install.packages("dlookr")
+#library(dlookr)
+```
+
+```{r}
+us <- read_csv("df_data/US/us_19.csv")
+```
+
+We start out with 29873 rows and 523 columns.
+
+```{r}
+# identify missing entires for each variable and plot dist of each variable
+skim(us)
+```
+
+```{r}
+#select numeric variables
+numeric <- us %>% 
+  select(where(is.numeric))
+
+glimpse(numeric)
+```
+
+```{r}
+
+```
+
+
+```{r}
+# summary stats for numeric variables
+numeric_of_intrst <- us %>% 
+  select(DEM_GENDER, DEM_AGE, WT, DEM_INCOME, DEM_REGION,
+         DEM_GENHEALTH, ORDER_SED, DEM_EDU, DEM_PREG, DEM_EDU, DEM_MARITAL, DEM_STDNT, STIM_USE, STIM_NMU) %>% 
+  mutate(DEM_GENDER = factor(DEM_GENDER),
+         DEM_PREG = factor(DEM_PREG),
+         DEM_GENHEALTH = factor(DEM_GENHEALTH),
+         DEM_STDNT = factor(DEM_STDNT),
+         DEM_EDU = factor(DEM_EDU),
+         STIM_USE = factor(STIM_USE),
+         STIM_NMU = factor(STIM_NMU))
+
+# describe(numeric_of_intrst)
+```
+
+```{r}
+# histogram of numeric variables
+plot_histogram(numeric_of_intrst)
+```
+
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=DEM_GENDER)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Age")
+```
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=DEM_STDNT)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Student")
+```
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=DEM_EDU)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Edu")
+```
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=DEM_INCOME)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Income")
+```
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=DEM_GENHEALTH)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Health Rating")
+```
+```{r}
+ggplot(numeric_of_intrst, aes(x=STIM_USE)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Stim Use")
+```
+
+
+
+```{r}
+ggplot(numeric_of_intrst, aes(x=STIM_NMU)) + 
+  geom_bar(fill = "turquoise") +
+  theme_bw() +
+  labs(title = "Distribution of Stim Use")
+```
+
+## Model Selection
+
+In order to make our model, we have decided to take a random sample of 10,000 to be sure that the model selection is accurate and not obscured by too many observations. 
+
+```{r random-sample, message = FALSE}
+set.seed(999) 
+numeric_of_intrst <- numeric_of_intrst %>%
+  sample_n(10000)
+```
+
+As we were interested in looking at variables that may help explain voter turnout, we started by considering all relevant predictor variables. We considered starting with a full model including sex, age, whether it was a Midterm or presidential election year, the year of the election, marital status, veteran status, citizenship status (native born or naturalized citizen), whether or not someone is Hispanic or Latinx, employment status, whether someone lives in a metropolitan area, highest education level attained, whether someone is a current student, and race.
+
+Using the random sample of 10,000 observations, we began the model selection process using backwards selection using AIC criteria. See Appendix B for the full backward selection output and the full model output.
+
+```{r}
+# summary stats for numeric variables
+numeric_of_intrst <- us_19_clean %>% 
+  select(DEM_GENDER, DEM_AGE, DEM_INCOME, DEM_REGION,
+         DEM_GENHEALTH, DEM_EDU, DEM_PREG, DEM_EDU, DEM_MARITAL, DEM_STDNT, STIM_USE, STIM_NMU, PAINREL_USE, PAINREL_NMU,
+         SED_USE, SED_NMU, THC_USE, THC_NMU, OP_USE, OP_NMU, ALL_USE, ALL_NMU)%>% 
+  mutate(DEM_MARITAL = factor(DEM_MARITAL),
+         DEM_GENDER = factor(DEM_GENDER),
+         DEM_REGION = factor(DEM_REGION),
+         DEM_GENHEALTH = factor(DEM_GENHEALTH),
+         DEM_STDNT = factor(DEM_STDNT),
+         DEM_EDU = factor(DEM_EDU),
+         STIM_USE = factor(STIM_USE),
+         STIM_NMU = factor(STIM_NMU),
+         PAINREL_USE = factor(PAINREL_USE),
+         PAINREL_NMU = factor(PAINREL_NMU),
+         SED_USE = factor(SED_USE),
+         SED_NMU = factor(SED_NMU),
+         THC_USE = factor(THC_USE),
+         THC_NMU = factor(THC_NMU),
+         OP_USE = factor(OP_USE),
+         OP_NMU = factor(OP_NMU),
+         ALL_USE = factor(ALL_USE),
+         ALL_NMU = factor(ALL_NMU)
+         )
+
+```
+
+
+```{r backward-selection, include=FALSE}
+int_only_model <- glm(STIM_USE ~ 1,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+full_model <- glm(STIM_USE ~ DEM_GENDER + DEM_AGE + WT + DEM_INCOME + DEM_REGION +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+best_model_stimuse <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r tidy model, include=FALSE}
+tidy(best_model_stimuse) %>% 
+  kable(digits = 3, caption = "STIM_USE Model Resulting From Backward Selection")
+```
+
+The final model included predictor variables for sex, whether someone between ages 18 and 24 is currently enrolled in school, citizenship status, employment status, race,  marital status, whether it was a presidential election year or a midterm election year, respondent age, and the highest education level of the respondent. 
+
+The backward selection based on AIC removed the variables for the year, whether someone is from a metro area, veteran status, and hispanic status (see Appendix B).
+
+```{r backward-selection, include=FALSE}
+int_only_model <- glm(STIM_NMU ~ 1,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+full_model <- glm(STIM_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME + DEM_REGION +
+         DEM_GENHEALTH + DEM_EDU,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+best_model_stimnmu <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r}
+tidy(best_model_stimnmu)
+```
+# Model for predicting whether or not a respondent uses the drug at all.
+```{r ALL_USE}
+int_only_model <- glm(ALL_USE ~ 1,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+full_model <- glm(ALL_USE ~ DEM_GENDER + DEM_AGE + DEM_INCOME + DEM_REGION +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+best_model_alluse <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+
+```{r}
+tidy(best_model_alluse)
+```
+
+# Model for predicting whether or not a respondent misuses.
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME + DEM_REGION +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = numeric_of_intrst,
+                      family = "binomial")
+
+best_model_allnmr <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r}
+tidy(best_model_allnmr)
+```
+
+```{r}
+#install.packages('jtools')
+library(jtools)
+```
+
+```{r}
+plot_summs(best_model_alluse, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
+```
+
+```{r}
+plot_summs(best_model_allnmr, scale = TRUE, inner_ci_level = .95, colors = 'Qual2')
+```
+
+
+Gender, Age, Income, Region 4, 
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_INCOME) %>% 
+  select(ALL_USE, ALL_NMU, DEM_INCOME) %>% 
+  filter(ALL_NMU == 0) %>% # people who use drugs for medical purposes only.
+  ggplot(aes(x = DEM_INCOME, y=..count../sum(..count..))) +
+  geom_histogram(fill = "black") +
+  theme_bw() + 
+  labs(y = "Proportion of Misusers", title = "Income", 
+       subtitle = "Respondents who used Prescription Drugs For Medical Purpose")
+```
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_INCOME) %>% 
+  select(ALL_USE, ALL_NMU, DEM_INCOME) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_INCOME, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar() +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Income", 
+       subtitle = "Respondents who Used/Misused Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_INCOME) %>% 
+  select(ALL_USE, ALL_NMU, DEM_INCOME) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_INCOME, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar(position="dodge") +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Income", 
+       subtitle = "Respondents who Used/Misused Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_INCOME) %>% 
+  select(ALL_USE, ALL_NMU, DEM_INCOME) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_INCOME, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar(position="fill") +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Income", 
+       subtitle = "Respondents who Used/Misused Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_GENDER) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_GENDER, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar(position = 'fill') +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Gender", 
+       subtitle = "Respondents who Used/Misused Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_GENDER) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_GENDER, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar(position = 'Dodge') +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Gender", 
+       subtitle = "Male Respondents More Likely to Misuse Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_AGE) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_AGE, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_histogram(binwidth = 5) +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Age", 
+       subtitle = "Young Respondents More Likely to Misuse Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+```{r}
+numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  group_by(DEM_REGION) %>% 
+  # filter(ALL_NMU == 1) %>% # people who abuse prescription drugs
+  ggplot(aes(x = DEM_REGION, y=..count../sum(..count..), fill = ALL_NMU)) +
+  geom_bar(position = "fill") +
+  theme_bw() + 
+  labs(y = 'Proportion of Users', title = "Region", 
+       subtitle = "Region 4 (West) More Likely to Misuse Prescription Drugs") + 
+  guides(fill=guide_legend(title="Misused the Prescription"))
+```
+
+
+# A model predicting whether or not respondent abuses the drug given that they use the drug.
+# response NMU == 0 (medical use only) or 1 (non-medical use)
+
+```{r}
+DRUG_USE <- numeric_of_intrst %>% 
+  filter(ALL_USE == 1)
+```
+
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = DRUG_USE,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME + DEM_REGION +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = DRUG_USE,
+                      family = "binomial")
+
+best_model_abuse_given_use <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r}
+tidy(best_model_abuse_given_use, conf.int = TRUE)
+```
+```{r}
+plot_summs(best_model_abuse_given_use, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
+```
+
+## FINAL_MODEL_START_HERE: Drug Misuse Given Drug Use (Grouped By US region_
+
+## Northeast	1 (3534 respondents)
+```{r}
+DRUG_USE_1 <- numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  filter(DEM_REGION == 1)
+```
+
+## Midwest	2 (4,290 respondents)
+```{r}
+DRUG_USE_2 <- numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  filter(DEM_REGION == 2)
+```
+
+## South	3 (7,431 respondents)
+```{r}
+DRUG_USE_3 <- numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  filter(DEM_REGION == 3)
+```
+
+## West	4 (4,509 respondents)
+```{r}
+DRUG_USE_4 <- numeric_of_intrst %>% 
+  filter(ALL_USE == 1) %>% 
+  filter(DEM_REGION == 4)
+```
+
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = DRUG_USE_1,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = DRUG_USE_1,
+                      family = "binomial")
+
+NORTH_EAST_MODEL <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = DRUG_USE_2,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = DRUG_USE_2,
+                      family = "binomial")
+
+MID_WEST_MODEL <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = DRUG_USE_3,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = DRUG_USE_3,
+                      family = "binomial")
+
+SOUTH_MODEL <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+
+```{r}
+int_only_model <- glm(ALL_NMU ~ 1,
+                     data = DRUG_USE_4,
+                      family = "binomial")
+
+full_model <- glm(ALL_NMU ~ DEM_GENDER + DEM_AGE + DEM_INCOME +
+         DEM_GENHEALTH + DEM_EDU + DEM_STDNT + DEM_MARITAL,
+                     data = DRUG_USE_4,
+                      family = "binomial")
+
+WEST_MODEL <- step(full_model, scope=formula(int_only_model), 
+                   direction = "backward")
+```
+
+```{r}
+NE_COEF <- tidy(NORTH_EAST_MODEL, conf.int = TRUE) %>%
+  mutate(REGION = "NE")
+```
+
+
+```{r}
+ggplot(NE_COEF, aes(term, estimate))+
+  geom_point()+
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  labs(title = "Coefficients of North East model")+
+  coord_flip() +
+  theme_bw() +
+  labs(y = "Covariates of Interest")
+```
+
+
+```{r}
+MW_COEF <- tidy(MID_WEST_MODEL, conf.int = TRUE) %>%
+  mutate(REGION = "MW")
+```
+
+```{r}
+ggplot(MW_COEF, aes(term, estimate))+
+  geom_point()+
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  labs(title = "Coefficients of Mid-West model")+
+  coord_flip() +
+  theme_bw() +
+  labs(y = "Covariates of Interest")
+```
+
+
+```{r}
+SOUTH_COEF <- tidy(SOUTH_MODEL, conf.int = TRUE) %>% 
+  mutate(REGION = "S")
+```
+
+```{r}
+ggplot(SOUTH_COEF, aes(term, estimate))+
+  geom_point()+
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  labs(title = "Coefficients of South model")+
+  coord_flip() +
+  theme_bw() +
+  labs(y = "Covariates of Interest")
+```
+
+```{r}
+WEST_COEF <- tidy(WEST_MODEL, conf.int = TRUE) %>% 
+  mutate(REGION = "W")
+```
+
+```{r}
+ggplot(WEST_COEF, aes(term, estimate))+
+  geom_point()+
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  labs(title = "Coefficients of South model")+
+  coord_flip() +
+  theme_bw() +
+  labs(y = "Covariates of Interest")
+```
+
+# Columns to be merged on
+```{r}
+MERGE_COLS <- c('term','estimate', 'statistic', 'conf.low', 'conf.high', 'p.value', 'REGION')
+```
+
+
+```{r}
+WEST_SOUTH <- merge(WEST_COEF, SOUTH_COEF, by = MERGE_COLS, all = TRUE)
+WSNE <- merge(WEST_SOUTH, NE_COEF, by = MERGE_COLS, all = TRUE)
+ALL_REGIONS_TIDY <- merge(WSNE, MW_COEF, by = MERGE_COLS, all = TRUE)
+
+ALL_REGIONS_TIDY <- ALL_REGIONS_TIDY %>% 
+  select(term, estimate, statistic, conf.low, conf.high, p.value, REGION)
+```
+
+```{r fig.height = 6, fig.width = 9}
+ggplot(ALL_REGIONS_TIDY, aes(y = estimate, x = term, color = REGION))+
+  geom_point() +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  geom_hline(yintercept=0, linetype="dashed", color = "red")+
+  coord_flip() +
+  theme_bw() +
+  labs(x = "Covariates of Interest", y = "Estimate", title = "Coefficients of Significance By US Region")
+```
+
+```{r fig.height = 6, fig.width = 9}
+tiff("ALL_REGIONS_TIDY.tiff", units="in", width=5, height=5, res=300)
+# insert ggplot code
+ggplot(ALL_REGIONS_TIDY, aes(y = estimate, x = term, color = REGION))+
+  geom_point(size = 0.6) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  geom_hline(yintercept=0, linetype="dashed", color = "red")+
+  coord_flip() +
+  theme_bw() +
+  labs(x = "Covariates of Interest", y = "Estimate", title = "Significant Logit Model Coefficients", subtitle = "By US Region")
+dev.off()
+```
+
+
+## Interaction Terms
+
+We will add in several interaction terms of interest and use a drop-in-deviance test to see if they are meaningful predictors of the odds of someone voting.
+
+The reduced model is the same as the model titled "Model Resulting From Backward Selection," (see Appendix B) and the full model is the reduced model plus interactions terms for sex and employment, election type and highest education level, sex and election type, and race and election type.
+
+The following hypotheses will be used:
+
+$H_0$: the coefficients for the interaction between election type and highest education level, sex and election type, and race and election type are all zero.
+
+$H_0:$
+
+$\beta_{sex*employed} = \beta_{Election*highest_education} = \beta_{sex*Election} = \beta_{race*Election} = 0$
+
+$H_a$: at least one of these coefficients for the interaction terms $\neq$ zero.
+
+$\alpha = 0.05$
+
+```{r interaction, include=FALSE}
+reduced_model <- best_model
+
+full_model <- glm(voted ~ sex + current_student + citizen + employed + 
+                    race + marst + Election + AGE + 
+                    highest_education +
+                    Election*highest_education + 
+                    sex*Election + 
+                    race*Election,
+                     data = elections_red,
+                      family = "binomial")
+
+```
+
+```{r drop-in-deviance1}
+anova(reduced_model, full_model, test = "Chisq") %>%
+  tidy() %>% 
+  kable(digits = 3, 
+        caption = "Drop-In-Deviance Test Results For Interaction Terms")
+```
+
+```{r model-output-interaction, include=FALSE}
+tidy(full_model) %>% 
+  kable(digits = 3)
+```
+
+
+
 ```{r data cleaning}
 elections_clean <- elections %>% 
   mutate(metro = if_else(METRO == 2, "Metro", "Not Metro/Unknown")) %>% 
