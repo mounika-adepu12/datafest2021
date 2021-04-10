@@ -150,6 +150,7 @@ numeric_of_intrst <- us_19_clean %>%
          DEM_GENHEALTH, DEM_EDU, DEM_PREG, DEM_EDU, DEM_MARITAL, DEM_STDNT, STIM_USE, STIM_NMU, PAINREL_USE, PAINREL_NMU,
          SED_USE, SED_NMU, THC_USE, THC_NMU, OP_USE, OP_NMU, ALL_USE, ALL_NMU)%>% 
   mutate(DEM_MARITAL = factor(DEM_MARITAL),
+         DEM_INCOME = factor(DEM_INCOME),
          DEM_GENDER = factor(DEM_GENDER),
          DEM_REGION = factor(DEM_REGION),
          DEM_GENHEALTH = factor(DEM_GENHEALTH),
@@ -187,8 +188,7 @@ best_model_stimuse <- step(full_model, scope=formula(int_only_model),
 ```
 
 ```{r tidy model, include=FALSE}
-tidy(best_model_stimuse) %>% 
-  kable(digits = 3, caption = "STIM_USE Model Resulting From Backward Selection")
+tidy(best_model_stimuse)
 ```
 
 The final model included predictor variables for sex, whether someone between ages 18 and 24 is currently enrolled in school, citizenship status, employment status, race,  marital status, whether it was a presidential election year or a midterm election year, respondent age, and the highest education level of the respondent. 
@@ -413,10 +413,9 @@ emplogitplot1( ALL_NMU ~ DEM_AGE, data = numeric_of_intrst,
 plot_summs(best_model_abuse_given_use, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
 ```
 
-Out of the respondents who have used presciption drugs during their lifetime, we found that age was a significant predictor of the odds of a respondent having also misused prescription drugs in their lifetime. For each additional year in age, the odds of a respondent having misused prescription drugs are expected to multiply by a factor of `r round(exp(-0.53609106), 3)` (p < 0.05), holding all other predictor variables constant. This may suggest that younger individuals are more likely to misuse the drug compared to older individuals given that they were prescribed the drug.
+Out of the respondents who have used presciption drugs during their lifetime, we found that age was a significant predictor of the odds of a respondent having also misused prescription drugs in their lifetime. For each additional year in age, the odds of a respondent having misused prescription drugs are expected to multiply by a factor of `r round(exp(-0.045126773), 3)` (p < 0.05), holding all other predictor variables constant. This may suggest that younger individuals are more likely to misuse the drug compared to older individuals given that they were prescribed the drug.
 
-As we would expect, a key demographic that influences voter turnout is 
-
+As we would expect, a key demographic that influences prescription drug misuse is gender. The odds of misuse for individuals who are females are expected to multiply by a factor of `r round(exp(-0.535022131), 3)` (p < 0.05) compared to individuals who are males, holding all else constant.
 
 The coefficient associated with gender is a significant predictor of the odds of someone voting. The odds of voting for individuals who are divorced or separated are expected to multiply by a factor of `r round(exp(-0.710), 3)` (exp(-0.710),p < 0.05) compared to individuals who are married, holding all else constant. Similarly, the odds of voting for individuals who are not married/unknown are expected to multiply by a factor of `r round(exp(-0.477), 3)` (exp(-0.477), p < 0.05) compared to individuals who are married, holding all else constant.
 
@@ -598,12 +597,12 @@ ALL_REGIONS_TIDY <- ALL_REGIONS_TIDY %>%
 
 ```{r fig.height = 6, fig.width = 9}
 ggplot(ALL_REGIONS_TIDY, aes(y = estimate, x = term, color = REGION))+
-  geom_point() +
+  geom_point(size = 0.6) +
   geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
   geom_hline(yintercept=0, linetype="dashed", color = "red")+
   coord_flip() +
   theme_bw() +
-  labs(x = "Covariates of Interest", y = "Estimate", title = "Coefficients of Significance By US Region")
+  labs(x = "Covariates of Interest", y = "Estimate", title = "Significant Logit Model Coefficients", subtitle = "By US Region")
 ```
 
 ```{r fig.height = 6, fig.width = 9}
