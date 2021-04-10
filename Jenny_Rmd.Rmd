@@ -377,7 +377,7 @@ numeric_of_intrst %>%
 # A model predicting whether or not respondent abuses the drug given that they use the drug.
 # response NMU == 0 (medical use only) or 1 (non-medical use)
 
-
+# FINAL MODEL OVERALL: all regions combine
 
 ```{r}
 DRUG_USE <- numeric_of_intrst %>% 
@@ -400,6 +400,8 @@ best_model_abuse_given_use <- step(full_model, scope=formula(int_only_model),
 
 ```{r}
 tidy(best_model_abuse_given_use, conf.int = TRUE)
+glance(best_model_abuse_given_use) %>% 
+  select(adj.r.squared, AIC)
 ```
 
 ```{r}
@@ -413,20 +415,67 @@ emplogitplot1( ALL_NMU ~ DEM_AGE, data = numeric_of_intrst,
 plot_summs(best_model_abuse_given_use, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
 ```
 
-Out of the respondents who have used presciption drugs during their lifetime, we found that age was a significant predictor of the odds of a respondent having also misused prescription drugs in their lifetime. For each additional year in age, the odds of a respondent having misused prescription drugs are expected to multiply by a factor of `r round(exp(-0.045126773), 3)` (p < 0.05), holding all other predictor variables constant. This may suggest that younger individuals are more likely to misuse the drug compared to older individuals given that they were prescribed the drug.
+Out of the respondents who have used presciption drugs during their lifetime, we found that age was a significant predictor of the odds of a respondent having misused prescription drugs in their lifetime. For each additional year in age, the odds of a respondent having misused prescription drugs are expected to multiply by a factor of `r round(exp(-0.045126773), 3)` (p < 0.05), holding all other predictor variables constant. This may suggest that younger individuals are more likely to misuse the drug compared to older individuals, who are less likely to misuse their prescribed drugs.
 
-As we would expect, a key demographic that influences prescription drug misuse is gender. The odds of misuse for individuals who are females are expected to multiply by a factor of `r round(exp(-0.535022131), 3)` (p < 0.05) compared to individuals who are males, holding all else constant.
+As we would expect, another key demographic that influences prescription drug misuse is gender. The odds of misuse for individuals who are female are expected to multiply by a factor of `rround(exp(-0.535022131), 3)` (p < 0.05) compared to individuals who are males, holding all else constant. 
 
-The coefficient associated with gender is a significant predictor of the odds of someone voting. The odds of voting for individuals who are divorced or separated are expected to multiply by a factor of `r round(exp(-0.710), 3)` (exp(-0.710),p < 0.05) compared to individuals who are married, holding all else constant. Similarly, the odds of voting for individuals who are not married/unknown are expected to multiply by a factor of `r round(exp(-0.477), 3)` (exp(-0.477), p < 0.05) compared to individuals who are married, holding all else constant.
+Another significant covariate of drug misuse is income. In comparison to individuals in the lowest income bracket (Less than 25,000 dollars), the odds of misuse for individuals who have an income of $100,000 or more are expected to multiply by a factor of `rround(exp(-0.208111158), 3)` (p < 0.05), holding all else constant.
 
-As we would expect, a key demographic that influences voter turnout is age. For each additional year in age, the odds voting are expected to multiply by a factor of `r round(exp(0.040), 3)` (exp(0.040), p < 0.05), holding all other predictor variables constant.
+Finally, a significant predictor is region. The odds of misuse for individuals who are in the West (Region4) are expected to multiply by a factor of `rround(exp(0.101726132	), 3)` (p < 0.05) compared to individuals who are in the North East (Region1), holding all else constant. On the other hand, the odds of misuse for individuals who are in the MidWest (Region2) are expected to multiply by a factor of `rround(exp(-0.220263014), 3)` (p < 0.05) compared to individuals who are in Region1 (the North East), holding all else constant.
 
-We found that variables associated with race are significant predictors of the odds of voting during a Midterm election year. They differ in their relationship and magnitude, however. The following interpretations describe how the respective characteristics in our predictor variables affect the odds of voting during Midterm election years compared to a baseline of individuals who are White, holding all else constant:
+According to the model, we would tell drug prescribers that young males of lower economic status are the population under the highest risk of misusing prescribed drugs.
+
+As a result of differences by region, we were curious to explore the predictors of drug misuse by region. That is, what is the profile of a person who misuses drugs by U.S. region?
 
 
-In contrast to presidential years, the odds of voting for Black individuals are expected to multiply by a factor of `r round(exp(-0.494-1.152), 3)` (exp(-0.494-1.152), p < 0.05) compared to White individuals. The odds of voting for Asian or Pacific Islander individuals are expected to multiply by a factor of `r round(exp(0.630-1.152), 3)` (exp(0.630-1.152), p < 0.05) compared to White individuals. And, the odds of voting for individuals that are two or more races are expected to multiply by a factor of `r round(exp(0.836-1.152), 3)` (exp(0.836-1.152), p < 0.05) compared to White individuals.
 
-The p-value for the coefficient related to Native American (p = 0.221) is greater than the alpha level of 0.05, indicating that there is not sufficient evidence that the odds of voting differ significantly between this population and White individuals, holding all else constant.
+## Creating a Classifier
+
+After creating our final model, we created a classifier for predicting whether an individual would be likely to vote with a goal of deciding whether or not an organization should send a voting mailer encouraging the person to vote. Through creating an ROC curve, we were able to choose a threshold that maximized sensitivity while also minimizing the false positive rate (1-specificity), keeping in mind that we aim to prioritize having a lower false positive rate than a higher sensitivity value, since it does not hurt to mail a few extra informational mailers to people who may already be planning to vote.
+
+We'll fit an ROC curve to help us determine a decision-making threshold. 
+
+```{r augment-for-roc}
+best_model_abuse_given_use_aug <- augment(best_model_abuse_given_use, type.predict = "response")
+```
+
+```{r calculate-threshold-levels}
+library(broom)
+library(yardstick)
+
+# calculate sensitivity and specificity at each threshold
+roc_curve_data <- best_model_abuse_given_use_aug %>%
+  roc_curve(ALL_NMU, .fitted) %>%
+  mutate(pred_prob = exp(.threshold)/(1 + exp(.threshold)))
+```
+
+.fitted: the predicted values, on the same scale as the data.
+.resid: residuals: the actual y values minus the fitted values
+.cluster: cluster assignments
+
+
+```{r roc-curve-plot, fig.height=3, fig.width=3, fig.align="center"}
+autoplot(roc_curve_data) +
+  labs(title = "ROC Curve For Final Model")
+```
+
+In the table below, we look at values within a range of thresholds in order to choose the 
+threshold that yields high sensitivity and low values of the false positive 
+rate (1 - specificity).
+
+```{r roc-curve-threshold}
+roc_curve_data <- roc_curve_data %>%
+  mutate(false_pos_rate = (1 - specificity))
+#roc_curve_data %>%
+#  filter(.threshold > 0.05666995, .threshold < 0.05672580) %>% 
+#  kable(digits = 3, caption = "ROC Curve Threshold Table")
+```
+
+In reference to our ROC curve and modeling objectives, we will choose a threshold of 0.716 because we want to prioritize having a lower false positive rate (and avoid making a type I error) than having higher true positive rate, or sensitivity, as it does not hurt to mail a few extra mailers to people who  may already be planning to vote. Because our decision will be to not send a mailer if the predicted probability is greater than the threshold, we want to be sure that we are not inaccurately predicting someone to vote when they truly will not, which means that we want to minimize our false positive rate.
+
+At this threshold, we have a sensitivity of about 0.602, which means that our model prediction will correctly identify about 60% of people who will vote. In other words, using this threshold, of the people who will actually vote, we will capture about 60.2% of them. Our false positive rate is 0.213, which means that with our current threshold, we are predicting "yes" for about 21.3% of people who will actually not vote.  
+
+Any data point with a probability over 0.716 will be predicted to be in the "voted" category and will therefore not be sent a mailer.
 
 
 ## FINAL_MODEL_START_HERE: Drug Misuse Given Drug Use (Grouped By US region_
@@ -614,7 +663,7 @@ ggplot(ALL_REGIONS_TIDY, aes(y = estimate, x = term, color = REGION))+
   geom_hline(yintercept=0, linetype="dashed", color = "red")+
   coord_flip() +
   theme_bw() +
-  labs(x = "Covariates of Interest", y = "Estimate", title = "Significant Logit Model Coefficients", subtitle = "By US Region")
+  labs(x = "Covariates of Interest", y = "Estimate", title = "Predictors of Drug Misuse", subtitle = "By US Region")
 dev.off()
 ```
 
