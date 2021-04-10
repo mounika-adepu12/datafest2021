@@ -377,6 +377,8 @@ numeric_of_intrst %>%
 # A model predicting whether or not respondent abuses the drug given that they use the drug.
 # response NMU == 0 (medical use only) or 1 (non-medical use)
 
+
+
 ```{r}
 DRUG_USE <- numeric_of_intrst %>% 
   filter(ALL_USE == 1)
@@ -399,9 +401,34 @@ best_model_abuse_given_use <- step(full_model, scope=formula(int_only_model),
 ```{r}
 tidy(best_model_abuse_given_use, conf.int = TRUE)
 ```
+
+```{r}
+install.packages("Stat2Data")
+library(Stat2Data)
+emplogitplot1( ALL_NMU ~ DEM_AGE, data = numeric_of_intrst, 
+              ngroups = 10, main = "Empirical Logit Plot For Age")
+```
+
 ```{r}
 plot_summs(best_model_abuse_given_use, scale = TRUE, inner_ci_level = .95, colors = 'Qual3')
 ```
+
+Out of the respondents who have used presciption drugs during their lifetime, we found that age was a significant predictor of the odds of a respondent having also misused prescription drugs in their lifetime. For each additional year in age, the odds of a respondent having misused prescription drugs are expected to multiply by a factor of `r round(exp(-0.53609106), 3)` (p < 0.05), holding all other predictor variables constant. This may suggest that younger individuals are more likely to misuse the drug compared to older individuals given that they were prescribed the drug.
+
+As we would expect, a key demographic that influences voter turnout is 
+
+
+The coefficient associated with gender is a significant predictor of the odds of someone voting. The odds of voting for individuals who are divorced or separated are expected to multiply by a factor of `r round(exp(-0.710), 3)` (exp(-0.710),p < 0.05) compared to individuals who are married, holding all else constant. Similarly, the odds of voting for individuals who are not married/unknown are expected to multiply by a factor of `r round(exp(-0.477), 3)` (exp(-0.477), p < 0.05) compared to individuals who are married, holding all else constant.
+
+As we would expect, a key demographic that influences voter turnout is age. For each additional year in age, the odds voting are expected to multiply by a factor of `r round(exp(0.040), 3)` (exp(0.040), p < 0.05), holding all other predictor variables constant.
+
+We found that variables associated with race are significant predictors of the odds of voting during a Midterm election year. They differ in their relationship and magnitude, however. The following interpretations describe how the respective characteristics in our predictor variables affect the odds of voting during Midterm election years compared to a baseline of individuals who are White, holding all else constant:
+
+
+In contrast to presidential years, the odds of voting for Black individuals are expected to multiply by a factor of `r round(exp(-0.494-1.152), 3)` (exp(-0.494-1.152), p < 0.05) compared to White individuals. The odds of voting for Asian or Pacific Islander individuals are expected to multiply by a factor of `r round(exp(0.630-1.152), 3)` (exp(0.630-1.152), p < 0.05) compared to White individuals. And, the odds of voting for individuals that are two or more races are expected to multiply by a factor of `r round(exp(0.836-1.152), 3)` (exp(0.836-1.152), p < 0.05) compared to White individuals.
+
+The p-value for the coefficient related to Native American (p = 0.221) is greater than the alpha level of 0.05, indicating that there is not sufficient evidence that the odds of voting differ significantly between this population and White individuals, holding all else constant.
+
 
 ## FINAL_MODEL_START_HERE: Drug Misuse Given Drug Use (Grouped By US region_
 
