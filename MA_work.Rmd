@@ -7,22 +7,50 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(readr)
+library(tidyverse)
+library(broom)
+library(knitr)
+library(patchwork)
+library(rms)
+library(reticulate)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+us <- read_csv("df_data/US/us_19_clean.csv")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+us  #temporary will remove later
+```
+
+
+```{r}
+full_model <- glm(factor(SED_USE) ~ factor(DEM_GENDER) + DEM_AGE + 
+                    factor(DEM_REGION) + factor(DEM_INCOME) + 
+                    factor(DEM_GENHEALTH) + factor(DAST_10) + 
+                    factor(DEM_RACE_AIAN) + 
+                    factor(DEM_RACE_ASIAN) + factor(DEM_RACE_BLACK) + 
+                    factor(DEM_RACE_NHPI) + factor(DEM_RACE_WHITE) + 
+                    factor(DEM_RACE_OTH) + factor(DEM_MARITAL) + 
+                    factor(DEM_EDU) + factor(DEM_STDNT) + factor(DEM_VET) + 
+                    factor(DEM_EMPLOY) + factor(DEM_HEALTH) + 
+                    factor(DEM_EMPLOY) + factor(DEM_INSUR) + factor(DEM_AGE10),
+                     data = us,
+                      family = "binomial")
+
+backward_aic <- step(full_model, direction = "backward")
+
+n <- 29873
+
+backward_bic <- step(full_model, k = log(n), direction = "backward")
+```
+```{r}
+tidy(backward_aic)
+
+tidy(backward_bic)
+```
+
